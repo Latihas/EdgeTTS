@@ -12,9 +12,10 @@ public sealed partial class EdgeTTSEngine : IDisposable
     {
         if (IsDisposed) return;
 
+        IsDisposed = true;
+
+        currentPlayer?.Stop();
         cancelSource.Cancel();
         cancelSource.Dispose();
-
-        IsDisposed = true;
     }
 }

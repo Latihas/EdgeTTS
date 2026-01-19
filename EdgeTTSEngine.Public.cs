@@ -53,11 +53,12 @@ public sealed partial class EdgeTTSEngine
     public void Speak(string text, EdgeTTSSettings settings)
     {
         ThrowIfDisposed();
+        var token = cancelSource.Token;
         _ = Task.Run(async () =>
         {
             try
             {
-                await SpeakAsync(text, settings).ConfigureAwait(false);
+                await SpeakAsync(text, settings, token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -66,7 +67,7 @@ public sealed partial class EdgeTTSEngine
             {
                 Log($"语音合成任务异常: {ex.Message}");
             }
-        }, cancelSource.Token).ConfigureAwait(false);
+        }, token).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -78,9 +79,29 @@ public sealed partial class EdgeTTSEngine
     public async Task SpeakAsync(string text, EdgeTTSSettings settings)
     {
         ThrowIfDisposed();
-        var audioFile = await GetOrCreateAudioFileAsync(text, settings).ConfigureAwait(false);
+        var token = cancelSource.Token;
+        await SpeakAsync(text, settings, token).ConfigureAwait(false);
+    }
+
+    public async Task SpeakAsync(string text, EdgeTTSSettings settings, CancellationToken cancellationToken)
+    {
+        ThrowIfDisposed();
+        var audioFile = await GetOrCreateAudioFileAsync(text, settings, cancellationToken).ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(audioFile)) return;
-        await AudioPlayer.PlayAudioAsync(audioFile, settings.Volume, settings.DeviceID).ConfigureAwait(false);
+
+        var player = new AudioPlayer(audioFile, settings.DeviceID);
+        var previousPlayer = Interlocked.Exchange(ref currentPlayer, player);
+        previousPlayer?.Stop();
+
+        try
+        {
+            await player.PlayAsync(settings.Volume, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            player.Dispose();
+            Interlocked.CompareExchange(ref currentPlayer, null, player);
+        }
     }
 
     /// <summary>
@@ -93,7 +114,8 @@ public sealed partial class EdgeTTSEngine
         ThrowIfDisposed();
         try
         {
-            Task.Run(async () => await GetAudioFileAsync(text, settings).ConfigureAwait(false), cancelSource.Token).ConfigureAwait(false);
+            var token = cancelSource.Token;
+            Task.Run(async () => await GetAudioFileAsync(text, settings, token).ConfigureAwait(false), token).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -110,8 +132,15 @@ public sealed partial class EdgeTTSEngine
     public async Task<string> GetAudioFileAsync(string text, EdgeTTSSettings settings)
     {
         ThrowIfDisposed();
-        var audioFile = await GetOrCreateAudioFileAsync(text, settings);
+        var token = cancelSource.Token;
+        var audioFile = await GetOrCreateAudioFileAsync(text, settings, token).ConfigureAwait(false);
         return audioFile;
+    }
+
+    private async Task<string> GetAudioFileAsync(string text, EdgeTTSSettings settings, CancellationToken cancellationToken)
+    {
+        ThrowIfDisposed();
+        return await GetOrCreateAudioFileAsync(text, settings, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -130,12 +159,13 @@ public sealed partial class EdgeTTSEngine
         ThrowIfDisposed();
         try
         {
+            var token = cancelSource.Token;
             Task.Run(async () => await GetAudioFilesAsync(texts,
                                                           settings,
                                                           maxConcurrency,
                                                           progressCallback,
-                                                          cancelSource.Token)
-                                     .ConfigureAwait(false), cancelSource.Token)
+                                                          token)
+                                     .ConfigureAwait(false), token)
                 .ConfigureAwait(false);
         }
         catch (OperationCanceledException)
@@ -172,7 +202,8 @@ public sealed partial class EdgeTTSEngine
         var totalStopwatch = new Stopwatch();
         totalStopwatch.Start();
 
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cancelSource.Token);
+        var stopToken = cancelSource.Token;
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, stopToken);
 
         var parallelOptions = new ParallelOptions
         {
@@ -184,7 +215,7 @@ public sealed partial class EdgeTTSEngine
         {
             await Parallel.ForEachAsync(textList, parallelOptions, async (text, _) =>
             {
-                var audioFile = await GetOrCreateAudioFileAsync(text, settings).ConfigureAwait(false);
+                var audioFile = await GetOrCreateAudioFileAsync(text, settings, linkedCts.Token).ConfigureAwait(false);
                 result[text] = audioFile;
                 var completed = Interlocked.Increment(ref completedCount);
                 progressCallback?.Invoke(completed, textList.Count);
@@ -214,8 +245,10 @@ public sealed partial class EdgeTTSEngine
     /// </summary>
     public void Stop()
     {
-        if (!IsDisposed)
-            cancelSource.Cancel();
+        if (IsDisposed) return;
+        
+        currentPlayer?.Stop();
+        CancelAndRenew();
     }
     
     /// <summary>

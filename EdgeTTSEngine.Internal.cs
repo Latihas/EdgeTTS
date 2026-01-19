@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Security;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using EdgeTTS.Common;
 using EdgeTTS.Models;
 using EdgeTTS.Network;
@@ -11,12 +12,31 @@ namespace EdgeTTS;
 
 public sealed partial class EdgeTTSEngine
 {
-    private readonly CancellationTokenSource cancelSource = new();
+    private CancellationTokenSource cancelSource = new();
+    private AudioPlayer? currentPlayer;
     
     private void Log(string message) => 
         LogHandler?.Invoke($"[EdgeTTS] {message}");
 
-    private async Task<string> GetOrCreateAudioFileAsync(string text, EdgeTTSSettings settings)
+    private void CancelAndRenew()
+    {
+        var newSource = new CancellationTokenSource();
+        var oldSource = Interlocked.Exchange(ref cancelSource, newSource);
+        try
+        {
+            oldSource.Cancel();
+        }
+        catch
+        {
+            // ignored
+        }
+        finally
+        {
+            oldSource.Dispose();
+        }
+    }
+
+    private async Task<string> GetOrCreateAudioFileAsync(string text, EdgeTTSSettings settings, CancellationToken cancellationToken)
     {
         text = SanitizeString(text, settings);
         
@@ -33,10 +53,10 @@ public sealed partial class EdgeTTSEngine
             var stopWatch = new Stopwatch();
             stopWatch.Start();
             
-            var content = await SynthesizeWithRetryAsync(settings, text).ConfigureAwait(false);
+            var content = await SynthesizeWithRetryAsync(settings, text, cancellationToken).ConfigureAwait(false);
             if (content != null)
             {
-                await File.WriteAllBytesAsync(cacheFile, content).ConfigureAwait(false);
+                await File.WriteAllBytesAsync(cacheFile, content, cancellationToken).ConfigureAwait(false);
                 
                 stopWatch.Stop();
                 Log($"语音合成完成, 耗时: {stopWatch.ElapsedMilliseconds:F2}ms");
@@ -62,20 +82,20 @@ public sealed partial class EdgeTTSEngine
         return safeText;
     }
 
-    private async Task<byte[]?> SynthesizeWithRetryAsync(EdgeTTSSettings settings, string text)
+    private async Task<byte[]?> SynthesizeWithRetryAsync(EdgeTTSSettings settings, string text, CancellationToken cancellationToken)
     {
         for (var retry = 0; retry < 10; retry++)
         {
             try
             {
-                using var ws = await EdgeTTSWebSocket.CreateWebSocketAsync(cancelSource.Token).ConfigureAwait(false);
-                return await AzureWSSynthesiser.SynthesisAsync(ws, cancelSource.Token, text, settings.Speed, settings.Pitch, 100, settings.Voice)
+                using var ws = await EdgeTTSWebSocket.CreateWebSocketAsync(cancellationToken).ConfigureAwait(false);
+                return await AzureWSSynthesiser.SynthesisAsync(ws, cancellationToken, text, settings.Speed, settings.Pitch, 100, settings.Voice)
                                                .ConfigureAwait(false);
             }
             catch (Exception ex) when (EdgeTTSWebSocket.IsConnectionResetError(ex) && retry < 9)
             {
                 Log($"语音合成失败, 正在重试 ({retry + 1}/10): {ex.Message}");
-                await Task.Delay(1000 * (retry + 1)).ConfigureAwait(false);
+                await Task.Delay(1000 * (retry + 1), cancellationToken).ConfigureAwait(false);
             }
         }
 
