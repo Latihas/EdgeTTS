@@ -10,22 +10,6 @@ internal static class AzureWSSynthesiser
     private const int MAX_RETRIES          = 9;
     private const int RETRY_DELAY_MS       = 1000;
 
-    private static class PathConstants
-    {
-        public const string SPEECH_CONFIG = "Path:speech.config";
-        public const string SSML          = "Path:ssml";
-        public const string TURN_START    = "Path:turn.start";
-        public const string TURN_END      = "Path:turn.end";
-        public const string AUDIO         = "Path:audio";
-    }
-
-    private enum ProtocolState
-    {
-        NotStarted,
-        TurnStarted,
-        Streaming
-    }
-
     public static async Task<byte[]> SynthesisAsync
     (
         WebSocket         ws,
@@ -466,5 +450,21 @@ internal static class AzureWSSynthesiser
                  .Append(text)
                  .Append("</mstts:express-as>")
                  .ToString();
+    }
+
+    private static class PathConstants
+    {
+        public const string SPEECH_CONFIG = "Path:speech.config";
+        public const string SSML          = "Path:ssml";
+        public const string TURN_START    = "Path:turn.start";
+        public const string TURN_END      = "Path:turn.end";
+        public const string AUDIO         = "Path:audio";
+    }
+
+    private enum ProtocolState
+    {
+        NotStarted,
+        TurnStarted,
+        Streaming
     }
 }

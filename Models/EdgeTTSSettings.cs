@@ -16,6 +16,6 @@ public class EdgeTTSSettings
         ["拾级迷宫"] = "十级迷宫"
     };
 
-    public override string ToString() => 
+    public override string ToString() =>
         $"{nameof(Speed)}: {Speed}, {nameof(Pitch)}: {Pitch}, {nameof(Voice)}: {Voice}";
 }
