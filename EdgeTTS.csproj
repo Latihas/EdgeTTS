@@ -10,8 +10,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="NAudio" Version="*" />
-        <PackageReference Include="System.Net.WebSockets.Client.Managed" Version="*"/>
+        <PackageReference Include="NAudio" Version="2.3.0" />
+        <PackageReference Include="System.Net.WebSockets.Client.Managed" Version="1.0.22"/>
     </ItemGroup>
 
     <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == ''">

@@ -10,7 +10,7 @@
       },
       "NAudio": {
         "type": "Direct",
-        "requested": "[*, )",
+        "requested": "[2.3.0, )",
         "resolved": "2.3.0",
         "contentHash": "xN+Lzlu9DmXqBiL6XkP0VZmgTxZPdSGjVSWtKG9HKuar3LhIYNOIYQETieigS+QDS+nrs1QmHbBWWOru0nWA5A==",
         "dependencies": {
@@ -24,7 +24,7 @@
       },
       "System.Net.WebSockets.Client.Managed": {
         "type": "Direct",
-        "requested": "[*, )",
+        "requested": "[1.0.22, )",
         "resolved": "1.0.22",
         "contentHash": "WqEOxPlXjuZrIjUtXNE9NxEfU/n5E35iV2PtoZdJSUC4tlrqwHnTee+wvMIM4OUaJWmwrymeqcgYrE0IkGAgLA=="
       },
