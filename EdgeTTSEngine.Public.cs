@@ -1,7 +1,13 @@
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
+using System.Linq;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using EdgeTTS.Common;
 using EdgeTTS.Models;
 using NAudio.CoreAudioApi;

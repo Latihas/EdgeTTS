@@ -1,8 +1,12 @@
+using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.IO;
 using System.Security;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using EdgeTTS.Common;
 using EdgeTTS.Models;
 using EdgeTTS.Network;

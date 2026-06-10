@@ -1,3 +1,5 @@
+using System;
+
 namespace EdgeTTS;
 
 public sealed partial class EdgeTTSEngine : IDisposable

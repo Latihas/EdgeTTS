@@ -1,5 +1,8 @@
+using System;
 using System.Net.Sockets;
 using System.Net.WebSockets;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace EdgeTTS.Network;
 
