@@ -16,7 +16,7 @@ namespace EdgeTTS;
 public sealed partial class EdgeTTSEngine
 {
     private readonly ConcurrentDictionary<AudioPlayer, byte> activePlayers = new();
-    private          CancellationTokenSource                 cancelSource  = new();
+    private CancellationTokenSource cancelSource = new();
 
     private void Log(string message) =>
         LogHandler?.Invoke($"[EdgeTTS] {message}");
@@ -44,7 +44,7 @@ public sealed partial class EdgeTTSEngine
     {
         text = SanitizeString(text, settings);
 
-        var hash      = ComputeHash($"EdgeTTS.{text}.{settings}")[..10];
+        var hash = ComputeHash($"EdgeTTS.{text}.{settings}")[..10];
         var cacheFile = Path.Combine(CacheFolder, $"{hash}.mp3");
 
         if (!File.Exists(cacheFile))

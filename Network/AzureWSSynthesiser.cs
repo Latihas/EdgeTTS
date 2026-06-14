@@ -11,29 +11,29 @@ namespace EdgeTTS.Network;
 internal static class AzureWSSynthesiser
 {
     private const int WEBSOCKET_TIMEOUT_MS = 15000;
-    private const int BUFFER_SIZE          = 4096;
-    private const int MAX_RETRIES          = 9;
-    private const int RETRY_DELAY_MS       = 1000;
+    private const int BUFFER_SIZE = 4096;
+    private const int MAX_RETRIES = 9;
+    private const int RETRY_DELAY_MS = 1000;
 
     public static async Task<byte[]> SynthesisAsync
     (
-        WebSocket         ws,
+        WebSocket ws,
         CancellationToken cancellationToken,
-        string            text,
-        int               speed,
-        int               pitch,
-        int               volume,
-        string            voice,
-        string?           style       = null,
-        int               styleDegree = 100,
-        string?           role        = null
+        string text,
+        int speed,
+        int pitch,
+        int volume,
+        string voice,
+        string? style = null,
+        int styleDegree = 100,
+        string? role = null
     )
     {
         ArgumentNullException.ThrowIfNull(ws);
         ArgumentNullException.ThrowIfNull(text);
         ArgumentNullException.ThrowIfNull(voice);
 
-        var        retryCount    = 0;
+        var retryCount = 0;
         Exception? lastException = null;
 
         while (retryCount < MAX_RETRIES)
@@ -81,22 +81,22 @@ internal static class AzureWSSynthesiser
     private static bool ShouldRetry(Exception ex) =>
         ex switch
         {
-            IOException             => true,
+            IOException => true,
             WebSocketException wsEx => wsEx.WebSocketErrorCode != WebSocketError.InvalidState,
-            _                       => false
+            _ => false
         };
 
     private static async Task<byte[]> ExecuteSynthesisAsync
     (
-        WebSocket         ws,
-        string            text,
-        int               speed,
-        int               pitch,
-        int               volume,
-        string            voice,
-        string?           style,
-        int               styleDegree,
-        string?           role,
+        WebSocket ws,
+        string text,
+        int speed,
+        int pitch,
+        int volume,
+        string voice,
+        string? style,
+        int styleDegree,
+        string? role,
         CancellationToken cancellationToken
     )
     {
@@ -152,8 +152,8 @@ internal static class AzureWSSynthesiser
 
     private static async Task SendWithRetryAsync
     (
-        Func<Task>        sendAction,
-        SemaphoreSlim     sendLock,
+        Func<Task> sendAction,
+        SemaphoreSlim sendLock,
         CancellationToken cancellationToken
     )
     {
@@ -181,15 +181,15 @@ internal static class AzureWSSynthesiser
 
     private static async Task<byte[]> ReceiveAudioDataAsync
     (
-        WebSocket         ws,
-        string            requestID,
+        WebSocket ws,
+        string requestID,
         CancellationToken cancellationToken
     )
     {
-        using var buffer        = new MemoryStream();
-        var       state         = ProtocolState.NotStarted;
-        var       receiveBuffer = new byte[BUFFER_SIZE];
-        var       messageBuffer = new List<byte>();
+        using var buffer = new MemoryStream();
+        var state = ProtocolState.NotStarted;
+        var receiveBuffer = new byte[BUFFER_SIZE];
+        var messageBuffer = new List<byte>();
 
         try
         {
@@ -253,8 +253,8 @@ internal static class AzureWSSynthesiser
 
     private static async Task SendWebSocketTextAsync
     (
-        WebSocket         ws,
-        string            message,
+        WebSocket ws,
+        string message,
         CancellationToken cancellationToken
     )
     {
@@ -263,14 +263,14 @@ internal static class AzureWSSynthesiser
             if (ws.State != WebSocketState.Open)
                 throw new WebSocketException(WebSocketError.InvalidState);
 
-            var buffer  = Encoding.UTF8.GetBytes(message);
+            var buffer = Encoding.UTF8.GetBytes(message);
             var segment = new ArraySegment<byte>(buffer);
 
             const int CHUNK_SIZE = 4096;
 
             for (var i = 0; i < segment.Count; i += CHUNK_SIZE)
             {
-                var size         = Math.Min(CHUNK_SIZE, segment.Count - i);
+                var size = Math.Min(CHUNK_SIZE, segment.Count - i);
                 var endOfMessage = i + size >= segment.Count;
 
                 await ws.SendAsync
@@ -290,9 +290,9 @@ internal static class AzureWSSynthesiser
 
     private static async Task SendConfigurationAsync
     (
-        WebSocket         ws,
-        string            requestID,
-        string            timestamp,
+        WebSocket ws,
+        string requestID,
+        string timestamp,
         CancellationToken cancellationToken
     )
     {
@@ -313,17 +313,17 @@ internal static class AzureWSSynthesiser
 
     private static async Task SendSpeechRequestAsync
     (
-        WebSocket         ws,
-        string            requestID,
-        string            timestamp,
-        string            text,
-        int               speed,
-        int               pitch,
-        int               volume,
-        string            voice,
-        string?           style,
-        int               styleDegree,
-        string?           role,
+        WebSocket ws,
+        string requestID,
+        string timestamp,
+        string text,
+        int speed,
+        int pitch,
+        int volume,
+        string voice,
+        string? style,
+        int styleDegree,
+        string? role,
         CancellationToken cancellationToken
     )
     {
@@ -342,8 +342,8 @@ internal static class AzureWSSynthesiser
 
     private static Task<ProtocolState> HandleTextMessageAsync
     (
-        string        message,
-        string        requestID,
+        string message,
+        string requestID,
         ProtocolState state
     )
     {
@@ -355,16 +355,16 @@ internal static class AzureWSSynthesiser
             state switch
             {
                 ProtocolState.NotStarted when message.Contains(PathConstants.TURN_START) => ProtocolState.TurnStarted,
-                ProtocolState.TurnStarted when message.Contains(PathConstants.TURN_END)  => throw new IOException("Unexpected turn.end"),
-                _                                                                        => state
+                ProtocolState.TurnStarted when message.Contains(PathConstants.TURN_END) => throw new IOException("Unexpected turn.end"),
+                _ => state
             }
         );
     }
 
     private static async Task HandleBinaryMessageAsync
     (
-        byte[]       data,
-        string       requestID,
+        byte[] data,
+        string requestID,
         MemoryStream buffer
     )
     {
@@ -415,14 +415,14 @@ internal static class AzureWSSynthesiser
 
     private static string CreateSSML
     (
-        string  text,
-        int     speed,
-        int     pitch,
-        int     volume,
-        string  voice,
-        string? style       = null,
-        int     styleDegree = 100,
-        string? role        = null
+        string text,
+        int speed,
+        int pitch,
+        int volume,
+        string voice,
+        string? style = null,
+        int styleDegree = 100,
+        string? role = null
     ) =>
         new StringBuilder()
             .Append("<speak xmlns=\"http://www.w3.org/2001/10/synthesis\" xmlns:mstts=\"http://www.w3.org/2001/mstts\" version=\"1.0\" xml:lang=\"en-US\">")
@@ -434,8 +434,8 @@ internal static class AzureWSSynthesiser
 
     private static string BuildExpressAs(string text, string? style, int styleDegree, string? role)
     {
-        if (string.IsNullOrWhiteSpace(style)                            ||
-            string.IsNullOrWhiteSpace(role)                             ||
+        if (string.IsNullOrWhiteSpace(style) ||
+            string.IsNullOrWhiteSpace(role) ||
             style.Equals("general", StringComparison.OrdinalIgnoreCase) ||
             role.Equals("default", StringComparison.OrdinalIgnoreCase))
             return text;
@@ -460,10 +460,10 @@ internal static class AzureWSSynthesiser
     private static class PathConstants
     {
         public const string SPEECH_CONFIG = "Path:speech.config";
-        public const string SSML          = "Path:ssml";
-        public const string TURN_START    = "Path:turn.start";
-        public const string TURN_END      = "Path:turn.end";
-        public const string AUDIO         = "Path:audio";
+        public const string SSML = "Path:ssml";
+        public const string TURN_START = "Path:turn.start";
+        public const string TURN_END = "Path:turn.end";
+        public const string AUDIO = "Path:audio";
     }
 
     private enum ProtocolState

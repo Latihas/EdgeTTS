@@ -12,7 +12,7 @@ internal static class Extension
     {
         if (bigEndian) Array.Reverse(toConvert);
         var dividend = new BigInteger(toConvert);
-        var builder  = new StringBuilder();
+        var builder = new StringBuilder();
 
         while (dividend != 0)
         {

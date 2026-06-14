@@ -8,7 +8,7 @@ public class VoiceInfo
 {
     private static readonly Dictionary<string, Dictionary<string, string>> GenderMap = new()
     {
-        ["zh"] = new() { ["Male"] = "男", ["Female"]  = "女" },
+        ["zh"] = new() { ["Male"] = "男", ["Female"] = "女" },
         ["ja"] = new() { ["Male"] = "男性", ["Female"] = "女性" },
         ["ko"] = new() { ["Male"] = "남성", ["Female"] = "여성" }
     };
@@ -51,7 +51,7 @@ public class VoiceInfo
 
     public override string ToString() =>
         $"{nameof(ShortName)}: {ShortName}, " +
-        $"{nameof(Gender)}: {Gender}, "       +
-        $"{nameof(Locale)}: {Locale}, "       +
+        $"{nameof(Gender)}: {Gender}, " +
+        $"{nameof(Locale)}: {Locale}, " +
         $"{nameof(FriendlyName)}: {FriendlyName}";
 }

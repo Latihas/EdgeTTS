@@ -17,7 +17,7 @@ namespace EdgeTTS;
 
 public sealed partial class EdgeTTSEngine
 {
-    private Dictionary<int, AudioDevice>?                        audioDevices;
+    private Dictionary<int, AudioDevice>? audioDevices;
     private Dictionary<string, Dictionary<string, VoiceInfo[]>>? voices;
 
     /// <summary>
@@ -142,7 +142,7 @@ public sealed partial class EdgeTTSEngine
     public async Task<string> GetAudioFileAsync(string text, EdgeTTSSettings settings)
     {
         ThrowIfDisposed();
-        var token     = cancelSource.Token;
+        var token = cancelSource.Token;
         var audioFile = await GetOrCreateAudioFileAsync(text, settings, token).ConfigureAwait(false);
         return audioFile;
     }
@@ -163,9 +163,9 @@ public sealed partial class EdgeTTSEngine
     public void CacheAudioFiles
     (
         IEnumerable<string> texts,
-        EdgeTTSSettings     settings,
-        int                 maxConcurrency   = 4,
-        Action<int, int>?   progressCallback = null
+        EdgeTTSSettings settings,
+        int maxConcurrency = 4,
+        Action<int, int>? progressCallback = null
     )
     {
         ThrowIfDisposed();
@@ -206,10 +206,10 @@ public sealed partial class EdgeTTSEngine
     public async Task<Dictionary<string, string>> GetAudioFilesAsync
     (
         IEnumerable<string> texts,
-        EdgeTTSSettings     settings,
-        int                 maxConcurrency    = 4,
-        Action<int, int>?   progressCallback  = null,
-        CancellationToken   cancellationToken = default
+        EdgeTTSSettings settings,
+        int maxConcurrency = 4,
+        Action<int, int>? progressCallback = null,
+        CancellationToken cancellationToken = default
     )
     {
         ThrowIfDisposed();
@@ -217,20 +217,20 @@ public sealed partial class EdgeTTSEngine
         var textList = texts.Where(t => !string.IsNullOrWhiteSpace(t)).ToList();
         if (textList.Count == 0) return new Dictionary<string, string>();
 
-        var result         = new ConcurrentDictionary<string, string>();
+        var result = new ConcurrentDictionary<string, string>();
         var completedCount = 0;
 
         Log($"开始批量合成 {textList.Count} 个文本的语音");
         var totalStopwatch = new Stopwatch();
         totalStopwatch.Start();
 
-        var       stopToken = cancelSource.Token;
+        var stopToken = cancelSource.Token;
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, stopToken);
 
         var parallelOptions = new ParallelOptions
         {
             MaxDegreeOfParallelism = maxConcurrency,
-            CancellationToken      = linkedCts.Token
+            CancellationToken = linkedCts.Token
         };
 
         try
@@ -297,8 +297,8 @@ public sealed partial class EdgeTTSEngine
 
             if (devices.Count == 0)
             {
-                using var enumerator    = new MMDeviceEnumerator();
-                var       outputDevices = enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active);
+                using var enumerator = new MMDeviceEnumerator();
+                var outputDevices = enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active);
 
                 for (var i = 0; i < outputDevices.Count; i++)
                 {
@@ -325,14 +325,14 @@ public sealed partial class EdgeTTSEngine
         {
             using var enumerator = new MMDeviceEnumerator();
 
-            var defaultDevice     = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+            var defaultDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
             var defaultDeviceName = defaultDevice.FriendlyName;
 
             for (var deviceNumber = 0; deviceNumber < WaveOut.DeviceCount; deviceNumber++)
             {
                 var capabilities = WaveOut.GetCapabilities(deviceNumber);
 
-                if (capabilities.ProductName.Equals(defaultDeviceName, StringComparison.OrdinalIgnoreCase)   ||
+                if (capabilities.ProductName.Equals(defaultDeviceName, StringComparison.OrdinalIgnoreCase) ||
                     capabilities.ProductName.Contains(defaultDeviceName, StringComparison.OrdinalIgnoreCase) ||
                     defaultDeviceName.Contains(capabilities.ProductName, StringComparison.OrdinalIgnoreCase))
                     return deviceNumber;
@@ -360,7 +360,7 @@ public sealed partial class EdgeTTSEngine
                 throw new FileNotFoundException($"语音配置文件未找到: {jsonPath}");
 
             var jsonContent = File.ReadAllText(jsonPath);
-            var voiceData   = JsonSerializer.Deserialize<VoiceInfo[]>(jsonContent);
+            var voiceData = JsonSerializer.Deserialize<VoiceInfo[]>(jsonContent);
 
             if (voiceData == null)
                 throw new InvalidOperationException("无法解析语音配置文件");

@@ -8,10 +8,10 @@ namespace EdgeTTS.Common;
 
 public sealed class AudioPlayer : IDisposable, IAsyncDisposable
 {
-    private readonly AudioFileReader            audioFile;
+    private readonly AudioFileReader audioFile;
     private readonly TaskCompletionSource<bool> playbackStarted;
-    private readonly IWavePlayer                waveOut;
-    private          bool                       isDisposed;
+    private readonly IWavePlayer waveOut;
+    private bool isDisposed;
 
     public AudioPlayer(string filePath, int audioDeviceID = -1)
     {
@@ -56,7 +56,7 @@ public sealed class AudioPlayer : IDisposable, IAsyncDisposable
         }
 
         waveOut.PlaybackStopped += WaveOut_PlaybackStopped;
-        playbackStarted         =  new TaskCompletionSource<bool>();
+        playbackStarted = new TaskCompletionSource<bool>();
     }
 
     public bool IsPlaying => waveOut.PlaybackState == PlaybackState.Playing;
@@ -171,17 +171,17 @@ public class PlayStateChangedEventArgs
 
 public enum WMPPlayState
 {
-    Undefined     = 0,
-    Stopped       = 1,
-    Paused        = 2,
-    Playing       = 3,
-    ScanForward   = 4,
-    ScanBackward  = 5,
-    Buffering     = 6,
-    Waiting       = 7,
-    MediaEnded    = 8,
+    Undefined = 0,
+    Stopped = 1,
+    Paused = 2,
+    Playing = 3,
+    ScanForward = 4,
+    ScanBackward = 5,
+    Buffering = 6,
+    Waiting = 7,
+    MediaEnded = 8,
     Transitioning = 9,
-    Ready         = 10,
-    Reconnecting  = 11,
-    Last          = 12
+    Ready = 10,
+    Reconnecting = 11,
+    Last = 12
 }

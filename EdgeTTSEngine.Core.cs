@@ -6,9 +6,9 @@ public sealed partial class EdgeTTSEngine : IDisposable
 {
     public bool IsDisposed { get; private set; }
 
-    public required string         CacheFolder { get; init; }
-    public required string         VoiceFolder { get; init; }
-    public required Action<string> LogHandler  { get; init; }
+    public required string CacheFolder { get; init; }
+    public required string VoiceFolder { get; init; }
+    public required Action<string> LogHandler { get; init; }
 
     public void Dispose()
     {
