@@ -37,7 +37,7 @@ public sealed partial class EdgeTTSEngine
     }
 
     /// <summary>
-    /// 按地区、性别查询可用声音
+    ///     按地区、性别查询可用声音
     /// </summary>
     /// <param name="locale">可选地区代码, 例如 zh-CN</param>
     /// <param name="gender">可选性别, 例如 Male 或 Female</param>
@@ -93,10 +93,10 @@ public sealed partial class EdgeTTSEngine
     (
         string text,
         string voice,
-        int    speed    = 100,
-        int    pitch    = 100,
-        int    volume   = 100,
-        int    deviceID = -1
+        int speed = 100,
+        int pitch = 100,
+        int volume = 100,
+        int deviceID = -1
     ) => Speak(text, CreateSettings(voice, speed, pitch, volume, deviceID));
 
     /// <summary>
@@ -119,10 +119,10 @@ public sealed partial class EdgeTTSEngine
     (
         string text,
         string voice,
-        int    speed                = 100,
-        int    pitch                = 100,
-        int    volume               = 100,
-        int    deviceID             = -1,
+        int speed = 100,
+        int pitch = 100,
+        int volume = 100,
+        int deviceID = -1,
         CancellationToken cancellationToken = default
     ) => SpeakAsync(text, CreateSettings(voice, speed, pitch, volume, deviceID), cancellationToken);
 
@@ -171,8 +171,8 @@ public sealed partial class EdgeTTSEngine
     (
         string text,
         string voice,
-        int    speed                = 100,
-        int    pitch                = 100,
+        int speed = 100,
+        int pitch = 100,
         CancellationToken cancellationToken = default
     ) => SynthesizeAudioAsync(text, CreateSettings(voice, speed, pitch), cancellationToken);
 
@@ -227,8 +227,8 @@ public sealed partial class EdgeTTSEngine
     (
         string text,
         string voice,
-        int    speed                = 100,
-        int    pitch                = 100,
+        int speed = 100,
+        int pitch = 100,
         CancellationToken cancellationToken = default
     ) => GetAudioFileAsync(text, CreateSettings(voice, speed, pitch), cancellationToken);
 
@@ -269,10 +269,10 @@ public sealed partial class EdgeTTSEngine
     public Task<Dictionary<string, string>> SynthesizeAsync
     (
         IEnumerable<string> texts,
-        EdgeTTSSettings     settings,
-        int                 maxConcurrency    = 4,
-        Action<int, int>?   progressCallback  = null,
-        CancellationToken   cancellationToken = default
+        EdgeTTSSettings settings,
+        int maxConcurrency = 4,
+        Action<int, int>? progressCallback = null,
+        CancellationToken cancellationToken = default
     ) => GetAudioFilesAsync(texts, settings, maxConcurrency, progressCallback, cancellationToken);
 
     private static void ValidateSettings(EdgeTTSSettings settings)
@@ -301,10 +301,10 @@ public sealed partial class EdgeTTSEngine
     private static EdgeTTSSettings CreateSettings
     (
         string voice,
-        int    speed,
-        int    pitch,
-        int    volume   = 100,
-        int    deviceID = -1
+        int speed,
+        int pitch,
+        int volume = 100,
+        int deviceID = -1
     ) => new(voice, speed, pitch, volume, deviceID);
 
     /// <summary>
@@ -463,9 +463,7 @@ public sealed partial class EdgeTTSEngine
         try
         {
             var jsonPath = Path.Combine(VoiceFolder, "voices.json");
-            var jsonContent = File.Exists(jsonPath)
-                                   ? File.ReadAllText(jsonPath)
-                                   : ReadEmbeddedVoicesData();
+            var jsonContent = File.Exists(jsonPath) ? File.ReadAllText(jsonPath) : ReadEmbeddedVoicesData();
             var voiceData = JsonSerializer.Deserialize<VoiceInfo[]>(jsonContent);
 
             if (voiceData == null)

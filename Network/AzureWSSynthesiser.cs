@@ -295,16 +295,16 @@ internal static class AzureWSSynthesiser
     )
     {
         var ssml = CreateSSML
-                   (
-                       text,
-                       speed,
-                       pitch,
-                       volume,
-                       voice,
-                       style,
-                       styleDegree,
-                       role
-                   );
+        (
+	        text,
+	        speed,
+	        pitch,
+	        volume,
+	        voice,
+	        style,
+	        styleDegree,
+	        role
+        );
         var request = new StringBuilder()
                       .AppendLine(PathConstants.SSML)
                       .AppendLine($"X-RequestID:{requestID}")
@@ -411,16 +411,16 @@ internal static class AzureWSSynthesiser
 
     private static string BuildExpressAs
     (
-        string                   text,
-        string?                  style,
-        int                      styleDegree,
-        string?                  role
+	    string text,
+	    string? style,
+	    int styleDegree,
+	    string? role
     )
     {
         var hasStyle = !string.IsNullOrWhiteSpace(style) &&
                        !string.Equals(style, "general", StringComparison.OrdinalIgnoreCase);
-        var hasRole  = !string.IsNullOrWhiteSpace(role) &&
-                       !string.Equals(role, "default", StringComparison.OrdinalIgnoreCase);
+        var hasRole = !string.IsNullOrWhiteSpace(role) &&
+                      !string.Equals(role, "default", StringComparison.OrdinalIgnoreCase);
         if (!hasStyle && !hasRole)
             return text;
 

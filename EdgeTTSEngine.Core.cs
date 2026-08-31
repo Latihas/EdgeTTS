@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 
 namespace EdgeTTS;
 
@@ -6,9 +7,9 @@ public sealed partial class EdgeTTSEngine : IDisposable
 {
     public EdgeTTSEngine
     (
-        string?         cacheFolder = null,
-        string?         voiceFolder = null,
-        Action<string>? logHandler  = null
+	    string? cacheFolder = null,
+	    string? voiceFolder = null,
+	    Action<string>? logHandler = null
     )
     {
         if (!string.IsNullOrWhiteSpace(cacheFolder))
@@ -22,13 +23,13 @@ public sealed partial class EdgeTTSEngine : IDisposable
 
     public bool IsDisposed { get; private set; }
 
-    public string         CacheFolder { get; init; } = Path.Combine
+    public string CacheFolder { get; init; } = Path.Combine
     (
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "EdgeTTSCache"
     );
-    public string         VoiceFolder { get; init; } = AppContext.BaseDirectory;
-    public Action<string>? LogHandler  { get; init; }
+    public string VoiceFolder { get; init; } = AppContext.BaseDirectory;
+    public Action<string>? LogHandler { get; init; }
 
     public void Dispose()
     {

@@ -25,16 +25,16 @@ public class EdgeTTSSettings
     public EdgeTTSSettings
     (
         string voice,
-        int    speed    = 100,
-        int    pitch    = 100,
-        int    volume   = 100,
-        int    deviceID = -1
+        int speed = 100,
+        int pitch = 100,
+        int volume = 100,
+        int deviceID = -1
     )
     {
-        Voice    = voice;
-        Speed    = speed;
-        Pitch    = pitch;
-        Volume   = volume;
+	    Voice = voice;
+	    Speed = speed;
+	    Pitch = pitch;
+	    Volume = volume;
         DeviceID = deviceID;
     }
 
@@ -92,22 +92,22 @@ public class EdgeTTSSettings
     /// <summary>
     ///     切换到指定音色, 自动清除不兼容的 Style 和 Role
     /// </summary>
-    public void SelectVoice
-    (
-        VoiceInfo voice
-    )
-    {
-        Voice = voice.ShortName;
-        var tag = voice.VoiceTag ?? new();
-
-        if (tag.Styles.Count == 0 || !tag.Styles.Contains(Style ?? string.Empty, StringComparer.OrdinalIgnoreCase))
-            Style = null;
-
-        if (tag.Roles.Count == 0 || !tag.Roles.Contains(Role ?? string.Empty, StringComparer.OrdinalIgnoreCase))
-            Role = null;
-    }
+    // public void SelectVoice
+    // (
+    //     VoiceInfo voice
+    // )
+    // {
+    //     Voice = voice.ShortName;
+    //     var tag = voice.VoiceTag ?? new();
+    //
+    //     if (tag.Styles.Count == 0 || !tag.Styles.Contains(Style ?? string.Empty, StringComparer.OrdinalIgnoreCase))
+    //         Style = null;
+    //
+    //     if (tag.Roles.Count == 0 || !tag.Roles.Contains(Role ?? string.Empty, StringComparer.OrdinalIgnoreCase))
+    //         Role = null;
+    // }
 
     public override string ToString() =>
-        $"{nameof(Speed)}: {Speed}, {nameof(Pitch)}: {Pitch}, {nameof(Voice)}: {Voice}, "           +
+	    $"{nameof(Speed)}: {Speed}, {nameof(Pitch)}: {Pitch}, {nameof(Voice)}: {Voice}, " +
         $"{nameof(Style)}: {Style}, {nameof(StyleDegree)}: {StyleDegree}, {nameof(Role)}: {Role}";
 }

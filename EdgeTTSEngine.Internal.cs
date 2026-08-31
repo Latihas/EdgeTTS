@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Net.WebSockets;
 using System.IO;
+using System.Net.WebSockets;
 using System.Security;
 using System.Security.Cryptography;
 using System.Text;
@@ -32,16 +32,10 @@ public sealed partial class EdgeTTSEngine
         (
             new
             {
-                Text              = text,
-                Voice             = settings.Voice,
-                Speed             = settings.Speed,
-                Pitch             = settings.Pitch,
-                Style             = settings.Style,
-                StyleDegree       = settings.StyleDegree,
-                Role              = settings.Role
+	            Text = text, settings.Voice, settings.Speed, settings.Pitch, settings.Style, settings.StyleDegree, settings.Role
             }
         );
-        var hash      = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(cacheKey)));
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(cacheKey)));
         var cacheFile = Path.Combine(CacheFolder, $"{hash}.mp3");
         var cacheLock = cacheLocks.GetOrAdd(cacheFile, static _ => new SemaphoreSlim(1, 1));
 
@@ -107,18 +101,18 @@ public sealed partial class EdgeTTSEngine
             {
                 using var ws = await EdgeTTSWebSocket.CreateWebSocketAsync(cancellationToken).ConfigureAwait(false);
                 return await AzureWSSynthesiser.SynthesisAsync
-                       (
-                           ws,
-                           cancellationToken,
-                           text,
-                           settings.Speed,
-                           settings.Pitch,
-                           100,
-                           settings.Voice,
-                           settings.Style,
-                           settings.StyleDegree,
-                           settings.Role
-                       )
+	                (
+		                ws,
+		                cancellationToken,
+		                text,
+		                settings.Speed,
+		                settings.Pitch,
+		                100,
+		                settings.Voice,
+		                settings.Style,
+		                settings.StyleDegree,
+		                settings.Role
+	                )
                                                .ConfigureAwait(false);
             }
             catch (Exception ex) when (IsTransientSynthesisError(ex))
