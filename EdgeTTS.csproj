@@ -17,4 +17,14 @@
         <DalamudLibPath>$(appdata)/XIVLauncherCN/addon/Hooks/dev</DalamudLibPath>
         <AssemblySearchPaths>$(AssemblySearchPaths);$(DalamudLibPath)</AssemblySearchPaths>
     </PropertyGroup>
+    <ItemGroup>
+        <None Include="voices.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <EmbeddedResource Include="voices.json">
+            <LogicalName>EdgeTTS.voices.json</LogicalName>
+        </EmbeddedResource>
+    </ItemGroup>
+
+
 </Project>

@@ -37,6 +37,29 @@ public sealed partial class EdgeTTSEngine
     }
 
     /// <summary>
+    /// 按地区、性别查询可用声音
+    /// </summary>
+    /// <param name="locale">可选地区代码, 例如 zh-CN</param>
+    /// <param name="gender">可选性别, 例如 Male 或 Female</param>
+    /// <returns>匹配的声音列表</returns>
+    public IReadOnlyList<VoiceInfo> FindVoices
+    (
+        string? locale = null,
+        string? gender = null
+    )
+    {
+        var candidates = Voices.Values
+                               .SelectMany(genders => genders.Values)
+                               .SelectMany(items => items)
+                               .Where(voice => string.IsNullOrWhiteSpace(locale) ||
+                                               string.Equals(voice.Locale, locale, StringComparison.OrdinalIgnoreCase))
+                               .Where(voice => string.IsNullOrWhiteSpace(gender) ||
+                                               string.Equals(voice.Gender, gender, StringComparison.OrdinalIgnoreCase));
+
+        return candidates.ToArray();
+    }
+
+    /// <summary>
     ///     所有可用的音频设备列表, 在首次读取时会自动调用 <see cref="ReloadAudioDevicesData" /> 方法填充数据并缓存, 需要刷新数据请调用
     ///     <see cref="ReloadAudioDevicesData" />
     /// </summary>
@@ -60,25 +83,21 @@ public sealed partial class EdgeTTSEngine
     {
         ThrowIfDisposed();
         var token = cancelSource.Token;
-        _ = Task.Run
-        (
-            async () =>
-            {
-                try
-                {
-                    await SpeakAsync(text, settings, token).ConfigureAwait(false);
-                }
-                catch (OperationCanceledException)
-                {
-                }
-                catch (Exception ex)
-                {
-                    Log($"语音合成任务异常: {ex.Message}");
-                }
-            },
-            token
-        ).ConfigureAwait(false);
+        _ = RunDetachedAsync(() => SpeakAsync(text, settings, token));
     }
+
+    public void Speak(string text) =>
+        Speak(text, new EdgeTTSSettings());
+
+    public void Speak
+    (
+        string text,
+        string voice,
+        int    speed    = 100,
+        int    pitch    = 100,
+        int    volume   = 100,
+        int    deviceID = -1
+    ) => Speak(text, CreateSettings(voice, speed, pitch, volume, deviceID));
 
     /// <summary>
     ///     异步播放指定文本的语音
@@ -93,10 +112,26 @@ public sealed partial class EdgeTTSEngine
         await SpeakAsync(text, settings, token).ConfigureAwait(false);
     }
 
+    public Task SpeakAsync(string text, CancellationToken cancellationToken = default) =>
+        SpeakAsync(text, new EdgeTTSSettings(), cancellationToken);
+
+    public Task SpeakAsync
+    (
+        string text,
+        string voice,
+        int    speed                = 100,
+        int    pitch                = 100,
+        int    volume               = 100,
+        int    deviceID             = -1,
+        CancellationToken cancellationToken = default
+    ) => SpeakAsync(text, CreateSettings(voice, speed, pitch, volume, deviceID), cancellationToken);
+
     public async Task SpeakAsync(string text, EdgeTTSSettings settings, CancellationToken cancellationToken)
     {
         ThrowIfDisposed();
-        var audioFile = await GetOrCreateAudioFileAsync(text, settings, cancellationToken).ConfigureAwait(false);
+        ValidateSettings(settings);
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancelSource.Token, cancellationToken);
+        var audioFile = await GetOrCreateAudioFileAsync(text, settings, linkedCts.Token).ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(audioFile)) return;
 
         var player = new AudioPlayer(audioFile, settings.DeviceID);
@@ -104,7 +139,7 @@ public sealed partial class EdgeTTSEngine
 
         try
         {
-            await player.PlayAsync(settings.Volume, cancellationToken).ConfigureAwait(false);
+            await player.PlayAsync(settings.Volume, linkedCts.Token).ConfigureAwait(false);
         }
         finally
         {
@@ -113,23 +148,66 @@ public sealed partial class EdgeTTSEngine
         }
     }
 
+    public async Task<byte[]> SynthesizeAudioAsync
+    (
+        string text,
+        EdgeTTSSettings settings,
+        CancellationToken cancellationToken = default
+    )
+    {
+        ThrowIfDisposed();
+        ValidateSettings(settings);
+        ArgumentException.ThrowIfNullOrWhiteSpace(text);
+
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancelSource.Token, cancellationToken);
+        var sanitizedText = SanitizeString(text, settings);
+        return await SynthesizeWithRetryAsync(settings, sanitizedText, linkedCts.Token).ConfigureAwait(false);
+    }
+
+    public Task<byte[]> SynthesizeAudioAsync(string text, CancellationToken cancellationToken = default) =>
+        SynthesizeAudioAsync(text, new EdgeTTSSettings(), cancellationToken);
+
+    public Task<byte[]> SynthesizeAudioAsync
+    (
+        string text,
+        string voice,
+        int    speed                = 100,
+        int    pitch                = 100,
+        CancellationToken cancellationToken = default
+    ) => SynthesizeAudioAsync(text, CreateSettings(voice, speed, pitch), cancellationToken);
+
     /// <summary>
     ///     同步缓存指定文本的音频文件
     /// </summary>
     /// <param name="text">要转换为语音的文本</param>
     /// <param name="settings">语音合成设置</param>
-    public void CacheAudioFile(string text, EdgeTTSSettings settings)
+    public void Synthesize(string text, EdgeTTSSettings settings)
     {
         ThrowIfDisposed();
+        var token = cancelSource.Token;
+        _ = RunDetachedAsync(() => SynthesizeAsync(text, settings, token));
+    }
 
+    public Task SynthesizeAsync
+    (
+        string text,
+        EdgeTTSSettings settings,
+        CancellationToken cancellationToken = default
+    ) => GetAudioFileAsync(text, settings, cancellationToken);
+
+    private async Task RunDetachedAsync(Func<Task> operation)
+    {
         try
         {
-            var token = cancelSource.Token;
-            Task.Run(async () => await GetAudioFileAsync(text, settings, token).ConfigureAwait(false), token).ConfigureAwait(false);
+            await operation().ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
-            // ignored
+            Log("后台语音任务已取消");
+        }
+        catch (Exception ex)
+        {
+            Log($"后台语音任务异常: {ex.Message}");
         }
     }
 
@@ -139,18 +217,33 @@ public sealed partial class EdgeTTSEngine
     /// <param name="text">要转换为语音的文本</param>
     /// <param name="settings">语音合成设置</param>
     /// <returns>音频文件的完整路径</returns>
-    public async Task<string> GetAudioFileAsync(string text, EdgeTTSSettings settings)
-    {
-        ThrowIfDisposed();
-        var token = cancelSource.Token;
-        var audioFile = await GetOrCreateAudioFileAsync(text, settings, token).ConfigureAwait(false);
-        return audioFile;
-    }
+    public Task<string> GetAudioFileAsync(string text, EdgeTTSSettings settings) =>
+        GetAudioFileAsync(text, settings, CancellationToken.None);
 
-    private async Task<string> GetAudioFileAsync(string text, EdgeTTSSettings settings, CancellationToken cancellationToken)
+    public Task<string> GetAudioFileAsync(string text, CancellationToken cancellationToken = default) =>
+        GetAudioFileAsync(text, new EdgeTTSSettings(), cancellationToken);
+
+    public Task<string> GetAudioFileAsync
+    (
+        string text,
+        string voice,
+        int    speed                = 100,
+        int    pitch                = 100,
+        CancellationToken cancellationToken = default
+    ) => GetAudioFileAsync(text, CreateSettings(voice, speed, pitch), cancellationToken);
+
+    public async Task<string> GetAudioFileAsync
+    (
+        string text,
+        EdgeTTSSettings settings,
+        CancellationToken cancellationToken
+    )
     {
         ThrowIfDisposed();
-        return await GetOrCreateAudioFileAsync(text, settings, cancellationToken).ConfigureAwait(false);
+        ValidateSettings(settings);
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancelSource.Token, cancellationToken);
+        var audioFile = await GetOrCreateAudioFileAsync(text, settings, linkedCts.Token).ConfigureAwait(false);
+        return audioFile;
     }
 
     /// <summary>
@@ -160,7 +253,7 @@ public sealed partial class EdgeTTSEngine
     /// <param name="settings">语音合成设置</param>
     /// <param name="maxConcurrency">最大并行处理数量，默认为4</param>
     /// <param name="progressCallback">进度回调函数，参数为已完成数量和总数量</param>
-    public void CacheAudioFiles
+    public void Synthesize
     (
         IEnumerable<string> texts,
         EdgeTTSSettings settings,
@@ -169,30 +262,50 @@ public sealed partial class EdgeTTSEngine
     )
     {
         ThrowIfDisposed();
-
-        try
-        {
-            var token = cancelSource.Token;
-            Task.Run
-                (
-                    async () => await GetAudioFilesAsync
-                                    (
-                                        texts,
-                                        settings,
-                                        maxConcurrency,
-                                        progressCallback,
-                                        token
-                                    )
-                                    .ConfigureAwait(false),
-                    token
-                )
-                .ConfigureAwait(false);
-        }
-        catch (OperationCanceledException)
-        {
-            // ignored
-        }
+        var token = cancelSource.Token;
+        _ = RunDetachedAsync(() => SynthesizeAsync(texts, settings, maxConcurrency, progressCallback, token));
     }
+
+    public Task<Dictionary<string, string>> SynthesizeAsync
+    (
+        IEnumerable<string> texts,
+        EdgeTTSSettings     settings,
+        int                 maxConcurrency    = 4,
+        Action<int, int>?   progressCallback  = null,
+        CancellationToken   cancellationToken = default
+    ) => GetAudioFilesAsync(texts, settings, maxConcurrency, progressCallback, cancellationToken);
+
+    private static void ValidateSettings(EdgeTTSSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        ArgumentException.ThrowIfNullOrWhiteSpace(settings.Voice);
+
+        if (settings.Speed is < 1 or > 200)
+            throw new ArgumentOutOfRangeException(nameof(settings.Speed), "Speed must be between 1 and 200");
+
+        if (settings.Pitch is < 1 or > 200)
+            throw new ArgumentOutOfRangeException(nameof(settings.Pitch), "Pitch must be between 1 and 200");
+
+        if (settings.Volume is < 0 or > 100)
+            throw new ArgumentOutOfRangeException(nameof(settings.Volume), "Volume must be between 0 and 100");
+
+        if (settings.StyleDegree is < 1 or > 200)
+            throw new ArgumentOutOfRangeException(nameof(settings.StyleDegree), "StyleDegree must be between 1 and 200");
+
+        if (settings.DeviceID < -1)
+            throw new ArgumentOutOfRangeException(nameof(settings.DeviceID), "DeviceID must be -1 or greater");
+
+        ArgumentNullException.ThrowIfNull(settings.PhonemeReplacements);
+    }
+
+    private static EdgeTTSSettings CreateSettings
+    (
+        string voice,
+        int    speed,
+        int    pitch,
+        int    volume   = 100,
+        int    deviceID = -1
+    ) => new(voice, speed, pitch, volume, deviceID);
 
     /// <summary>
     ///     批量获取多个文本的音频文件路径，高效率地预先合成多个文本音频
@@ -213,8 +326,13 @@ public sealed partial class EdgeTTSEngine
     )
     {
         ThrowIfDisposed();
+        ValidateSettings(settings);
+        ArgumentNullException.ThrowIfNull(texts);
 
-        var textList = texts.Where(t => !string.IsNullOrWhiteSpace(t)).ToList();
+        if (maxConcurrency < 1)
+            throw new ArgumentOutOfRangeException(nameof(maxConcurrency));
+
+        var textList = texts.Where(t => !string.IsNullOrWhiteSpace(t)).Distinct(StringComparer.Ordinal).ToList();
         if (textList.Count == 0) return new Dictionary<string, string>();
 
         var result = new ConcurrentDictionary<string, string>();
@@ -235,13 +353,14 @@ public sealed partial class EdgeTTSEngine
 
         try
         {
+            var token = linkedCts.Token;
             await Parallel.ForEachAsync
             (
                 textList,
                 parallelOptions,
                 async (text, _) =>
                 {
-                    var audioFile = await GetOrCreateAudioFileAsync(text, settings, linkedCts.Token).ConfigureAwait(false);
+                    var audioFile = await GetOrCreateAudioFileAsync(text, settings, token).ConfigureAwait(false);
                     result[text] = audioFile;
                     var completed = Interlocked.Increment(ref completedCount);
                     progressCallback?.Invoke(completed, textList.Count);
@@ -265,18 +384,6 @@ public sealed partial class EdgeTTSEngine
         }
 
         return new Dictionary<string, string>(result);
-    }
-
-    /// <summary>
-    ///     停止当前正在进行的语音合成或播放操作
-    /// </summary>
-    public void Stop()
-    {
-        if (IsDisposed) return;
-
-        foreach (var player in activePlayers.Keys)
-            player.Stop();
-        CancelAndRenew();
     }
 
     /// <summary>
@@ -356,10 +463,9 @@ public sealed partial class EdgeTTSEngine
         try
         {
             var jsonPath = Path.Combine(VoiceFolder, "voices.json");
-            if (!File.Exists(jsonPath))
-                throw new FileNotFoundException($"语音配置文件未找到: {jsonPath}");
-
-            var jsonContent = File.ReadAllText(jsonPath);
+            var jsonContent = File.Exists(jsonPath)
+                                   ? File.ReadAllText(jsonPath)
+                                   : ReadEmbeddedVoicesData();
             var voiceData = JsonSerializer.Deserialize<VoiceInfo[]>(jsonContent);
 
             if (voiceData == null)
@@ -381,7 +487,7 @@ public sealed partial class EdgeTTSEngine
                                      .ToDictionary
                                      (
                                          x => x.Key,
-                                         x => x.GroupBy(d => d.GenderName)
+                                         x => x.GroupBy(d => d.Gender)
                                                .ToDictionary(d => d.Key, d => d.ToArray())
                                      );
         }
@@ -389,5 +495,16 @@ public sealed partial class EdgeTTSEngine
         {
             throw new InvalidOperationException($"加载语音配置失败: {ex.Message}", ex);
         }
+    }
+
+    private static string ReadEmbeddedVoicesData()
+    {
+        const string RESOURCE_NAME = "EdgeTTS.voices.json";
+        using var stream = typeof(EdgeTTSEngine).Assembly.GetManifestResourceStream(RESOURCE_NAME);
+        if (stream == null)
+            throw new FileNotFoundException($"语音配置文件未找到, 资源名: {RESOURCE_NAME}");
+
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
     }
 }
