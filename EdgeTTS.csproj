@@ -7,7 +7,7 @@
         <Use_DalamudPackager>false</Use_DalamudPackager>
     </PropertyGroup>
     <ItemGroup>
-	    <PackageReference Include="NAudio" Version="3.0.1"/>
+	    <PackageReference Include="NAudio" Version="3.1.0"/>
         <PackageReference Include="System.Net.WebSockets.Client.Managed" Version="1.0.22"/>
     </ItemGroup>
     <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == ''">
