@@ -27,7 +27,7 @@ public sealed class AudioPlayer : IDisposable, IAsyncDisposable
         {
             try
             {
-                waveOut = new WaveOutEvent { DeviceNumber = audioDeviceID };
+                waveOut = new WaveOut { DeviceNumber = audioDeviceID };
             }
             catch
             {
@@ -38,7 +38,7 @@ public sealed class AudioPlayer : IDisposable, IAsyncDisposable
                 }
                 catch
                 {
-                    waveOut = new WaveOutEvent();
+                    waveOut = new WaveOut();
                 }
             }
         }
@@ -51,7 +51,7 @@ public sealed class AudioPlayer : IDisposable, IAsyncDisposable
             }
             catch
             {
-                waveOut = new WaveOutEvent();
+                waveOut = new WaveOut();
             }
         }
 
