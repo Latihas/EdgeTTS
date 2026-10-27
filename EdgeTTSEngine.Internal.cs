@@ -21,10 +21,18 @@ public sealed partial class EdgeTTSEngine
     private readonly ConcurrentDictionary<string, SemaphoreSlim> cacheLocks = new(StringComparer.OrdinalIgnoreCase);
     private CancellationTokenSource cancelSource = new();
 
-    private void Log(string message) =>
+    private void Log
+    (
+        string message
+    ) =>
         LogHandler?.Invoke($"[EdgeTTS] {message}");
 
-    private async Task<string> GetOrCreateAudioFileAsync(string text, EdgeTTSSettings settings, CancellationToken cancellationToken)
+    private async Task<string> GetOrCreateAudioFileAsync
+    (
+        string            text,
+        EdgeTTSSettings   settings,
+        CancellationToken cancellationToken
+    )
     {
         text = SanitizeString(text, settings);
 
@@ -32,7 +40,10 @@ public sealed partial class EdgeTTSEngine
         (
             new
             {
-	            Text = text, settings.Voice, settings.Speed, settings.Pitch, settings.Style, settings.StyleDegree, settings.Role
+                Text = text,
+                settings.Voice,
+                settings.Speed,
+                settings.Pitch
             }
         );
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(cacheKey)));
@@ -40,6 +51,7 @@ public sealed partial class EdgeTTSEngine
         var cacheLock = cacheLocks.GetOrAdd(cacheFile, static _ => new SemaphoreSlim(1, 1));
 
         await cacheLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+
         try
         {
             if (File.Exists(cacheFile))
@@ -59,6 +71,7 @@ public sealed partial class EdgeTTSEngine
                 throw new IOException("语音合成返回空音频");
 
             var temporaryFile = $"{cacheFile}.{Guid.NewGuid():N}.tmp";
+
             try
             {
                 await File.WriteAllBytesAsync(temporaryFile, content, cancellationToken).ConfigureAwait(false);
@@ -82,17 +95,26 @@ public sealed partial class EdgeTTSEngine
         }
     }
 
-    private static string SanitizeString(string text, EdgeTTSSettings settings)
+    private static string SanitizeString
+    (
+        string          text,
+        EdgeTTSSettings settings
+    )
     {
         if (string.IsNullOrEmpty(text)) return string.Empty;
 
         foreach (var (word, phoneme) in settings.PhonemeReplacements)
             text = text.Replace(word, phoneme);
 
-        return SecurityElement.Escape(text.Replace('：', ':')) ?? string.Empty;
+        return SecurityElement.Escape(text.Replace('：', ':'));
     }
 
-    private async Task<byte[]> SynthesizeWithRetryAsync(EdgeTTSSettings settings, string text, CancellationToken cancellationToken)
+    private async Task<byte[]> SynthesizeWithRetryAsync
+    (
+        EdgeTTSSettings   settings,
+        string            text,
+        CancellationToken cancellationToken
+    )
     {
         Exception? lastException = null;
 
@@ -103,15 +125,12 @@ public sealed partial class EdgeTTSEngine
                 return await AzureWSSynthesiser.SynthesisAsync
 	                (
 		                ws,
-		                cancellationToken,
 		                text,
 		                settings.Speed,
 		                settings.Pitch,
 		                100,
 		                settings.Voice,
-		                settings.Style,
-		                settings.StyleDegree,
-		                settings.Role
+                                                   cancellationToken
 	                )
                                                .ConfigureAwait(false);
             }
@@ -128,7 +147,10 @@ public sealed partial class EdgeTTSEngine
         throw new IOException("语音合成失败, 已达到最大重试次数", lastException);
     }
 
-    private static bool IsTransientSynthesisError(Exception exception)
+    private static bool IsTransientSynthesisError
+    (
+        Exception exception
+    )
     {
         for (var current = exception; current != null; current = current.InnerException)
         {
